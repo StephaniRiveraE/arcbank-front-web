@@ -24,10 +24,9 @@ jobs:
         run: npm ci
       
       - name: Build de producción
-        run: |
-          npm run build
+        run: npm run build
         env:
-          REACT_APP_API_BASE_URL: ${{ vars.API_URL }}
+          REACT_APP_API_URL: ${{ vars.API_URL }}
           CI: false
       
       - name: Configurar AWS
@@ -39,7 +38,6 @@ jobs:
       
       - name: Deploy a S3
         run: |
-          # Detectar carpeta de build (específico para React Scripts es 'build')
           if [ -d "build" ]; then
             BUILD_DIR="build"
           else
@@ -49,18 +47,15 @@ jobs:
           
           echo "📦 Desplegando desde $BUILD_DIR a s3://${{ env.S3_BUCKET }}"
           
-          # Sincronizar archivos a S3 con caché agresiva para estáticos
           aws s3 sync $BUILD_DIR s3://${{ env.S3_BUCKET }} \
             --delete \
             --cache-control "max-age=31536000" \
             --exclude "index.html" \
             --exclude "*.json"
           
-          # index.html sin caché para asegurar actualizaciones inmediatas
           aws s3 cp $BUILD_DIR/index.html s3://${{ env.S3_BUCKET }}/index.html \
             --cache-control "no-cache, no-store, must-revalidate"
           
-          # Archivos JSON (configuraciones) sin caché
           if ls $BUILD_DIR/*.json 1> /dev/null 2>&1; then
             aws s3 cp $BUILD_DIR/ s3://${{ env.S3_BUCKET }}/ \
               --recursive \
