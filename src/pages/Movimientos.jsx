@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { getMovimientos } from '../services/bancaApi'
+import { getMovimientos, solicitarReverso } from '../services/bancaApi'
 import { FiFilter, FiDownload, FiSearch } from 'react-icons/fi'
 
 // Función para parsear fechas de Java LocalDateTime correctamente
@@ -95,6 +95,22 @@ export default function Movimientos() {
     }
   }
 
+  const handleRefund = async (id, reference) => {
+    const motivo = window.prompt("Ingrese el motivo de la devolución (ej: AC03, AM04, TECH):", "TECH");
+    if (!motivo) return;
+
+    try {
+      setLoading(true);
+      await solicitarReverso(id, motivo);
+      alert("Solicitud de devolución procesada con éxito.");
+      await load();
+    } catch (e) {
+      alert("Error al procesar la devolución: " + e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const currentAcc = state.user.accounts.find(a => String(a.id) === String(selectedAccId))
 
   return (
@@ -158,7 +174,8 @@ export default function Movimientos() {
                   <th>CONCEPTO DE OPERACIÓN</th>
                   <th>TIPO</th>
                   <th className="text-end">MONTO</th>
-                  <th className="text-end pe-4">BALANCE</th>
+                  <th className="text-end">BALANCE</th>
+                  <th className="text-end pe-4">ACCIONES</th>
                 </tr>
               </thead>
               <tbody>
@@ -189,8 +206,19 @@ export default function Movimientos() {
                     <td className={`text-end py-3 fw-bold h5 mb-0 ${tx.isDebit ? 'text-danger' : 'text-success'}`}>
                       {tx.isDebit ? '-' : '+'}$ {tx.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                     </td>
-                    <td className="text-end pe-4 py-3 fw-bold text-white h5 mb-0" style={{ fontFamily: 'monospace' }}>
+                    <td className="text-end py-3 fw-bold text-white h5 mb-0" style={{ fontFamily: 'monospace' }}>
                       $ {tx.balance != null ? tx.balance.toLocaleString('en-US', { minimumFractionDigits: 2 }) : '----'}
+                    </td>
+                    <td className="text-end pe-4 py-3">
+                      {tx.isRefundable && (
+                        <button
+                          className="btn btn-sm btn-outline-danger fw-bold"
+                          onClick={() => handleRefund(tx.id, tx.reference)}
+                          style={{ fontSize: '10px' }}
+                        >
+                          DEVOLVER
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}

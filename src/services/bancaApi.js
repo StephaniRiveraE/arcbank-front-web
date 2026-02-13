@@ -19,8 +19,12 @@ async function request(path, options = {}) {
 
   if (!res.ok) {
     const errorBody = await res.json().catch(() => ({}));
-    const msg = errorBody.mensaje || errorBody.error || res.statusText;
-    console.error("❌ Error response:", msg);
+    const msg = errorBody.mensaje || errorBody.error || res.statusText || "Error Desconocido";
+    console.error(`❌ Error en [${options.method || 'GET'}] ${path}:`, {
+      status: res.status,
+      message: msg,
+      body: errorBody
+    });
     throw new Error(msg);
   }
 
@@ -41,8 +45,9 @@ export function parseIsoError(msg) {
     'AC00': '✅ Transacción completada exitosamente.',
     'AM04': '🚫 Saldo insuficiente en su cuenta.',
     'AC01': '❌ El número de cuenta destino no existe.',
-    'AC03': '💵 Moneda no permitida. Solo se aceptan Dólares.',
+    'AC03': '❌ La cuenta destino es inválida.',
     'AC04': '🔒 La cuenta destino está cerrada.',
+    'AC06': '🔒 La cuenta destino está bloqueada.',
     'AG01': '⚠️ OPERACIÓN RESTRINGIDA: Su institución está en modo de cierre operativo (Solo Recepción).',
     'CH03': '📉 El monto excede el límite permitido ($10k).',
     'DUPL': '⚠️ Esta transferencia ya fue procesada (Duplicada).',
@@ -136,13 +141,13 @@ export async function realizarTransferenciaInterbancaria(payload) {
 
 export async function getBancos() {
   try {
-    const response = await request('/api/bancos');
-    // Mapear respuesta para compatibilidad con el frontend
-    const bancos = response.bancos || [];
+    const response = await request('/api/transacciones/red/bancos');
+    // La respuesta del backend es una List<Map<String, Object>> o similar
+    const bancos = Array.isArray(response) ? response : (response.bancos || []);
     return bancos.map(b => ({
-      id: b.codigo || b.id,
-      nombre: b.nombre || b.name || b.codigo,
-      codigo: b.codigo
+      id: b.codigo || b.id || b.bic,
+      nombre: b.nombre || b.name || b.codigo || b.bic,
+      codigo: b.codigo || b.bic
     }));
   } catch (e) {
     console.warn("Error cargando bancos del switch:", e);

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
-import { realizarTransferenciaInterbancaria, parseIsoError, validarCuenta } from "../services/bancaApi";
+import { realizarTransferenciaInterbancaria, parseIsoError, validarCuenta, getBancos } from "../services/bancaApi";
 import { useNavigate } from "react-router-dom";
 import { FiArrowLeft, FiArrowRight, FiCheckCircle, FiGlobe, FiSearch, FiXCircle } from "react-icons/fi";
 
@@ -27,13 +27,28 @@ export default function Interbank() {
     const [loadingMsg, setLoadingMsg] = useState("Conectando con la red...");
 
     useEffect(() => {
-        // Bancos registrados en el Switch (Quemados por requerimiento)
-        const hardcodedBanks = [
-            { id: "NEXUS_BANK", codigo: "NEXUS_BANK", nombre: "Nexus Bank (270100)", bin: "270100" },
-            { id: "ECUSOL_BK", codigo: "ECUSOL_BK", nombre: "Ecusol Bank (370100)", bin: "370100" },
-            { id: "BANTEC", codigo: "BANTEC", nombre: "Bantec (100050)", bin: "100050" },
-        ];
-        setBanks(hardcodedBanks);
+        const fetchBanks = async () => {
+            // Bancos registrados en el Switch (Fallback por si el API falla)
+            const hardcodedBanks = [
+                { id: "NEXUS_BANK", codigo: "NEXUS_BANK", nombre: "Nexus Bank (270100)", bin: "270100" },
+                { id: "ECUSOL_BK", codigo: "ECUSOL_BK", nombre: "Ecusol Bank (370100)", bin: "370100" },
+                { id: "BANTEC", codigo: "BANTEC", nombre: "Bantec (100050)", bin: "100050" },
+            ];
+
+            try {
+                const fetchedBanks = await getBancos();
+                if (fetchedBanks && fetchedBanks.length > 0) {
+                    setBanks(fetchedBanks);
+                } else {
+                    setBanks(hardcodedBanks);
+                }
+            } catch (e) {
+                console.error("No se pudo cargar bancos dinámicos:", e);
+                setBanks(hardcodedBanks);
+            }
+        };
+
+        fetchBanks();
 
         if (accounts.length > 0 && !fromAccId) setFromAccId(accounts[0].id);
     }, [accounts.length, fromAccId]);
@@ -50,11 +65,13 @@ export default function Interbank() {
         try {
             const res = await validarCuenta(toInfo.bank, toInfo.account);
 
-            // La API devuelve: { status: "SUCCESS", data: { exists: true, ownerName: "...", ... } }
-            // O lanza error si 404/500
-            if (res && res.data && res.data.exists) {
-                setValidation({ status: 'valid', msg: `Cuenta verificada: ${res.data.ownerName}` });
-                setToInfo(prev => ({ ...prev, name: res.data.ownerName }));
+            // La API del Switch suele devolver los datos en 'body'
+            // Pero algunos wrappers del backend podrían usar 'data'
+            const validationData = res?.data || res?.body || res;
+
+            if (validationData && validationData.exists) {
+                setValidation({ status: 'valid', msg: `Cuenta verificada: ${validationData.ownerName}` });
+                setToInfo(prev => ({ ...prev, name: validationData.ownerName }));
             } else {
                 setValidation({ status: 'invalid', msg: 'Cuenta no encontrada en Banco Destino.' });
             }
