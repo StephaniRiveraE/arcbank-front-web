@@ -27,6 +27,7 @@ jobs:
         run: npm run build
         env:
           CI: false
+          REACT_APP_API_BASE_URL: http://k8s-bancaecosistemash-be991fd327-1419468438.us-east-2.elb.amazonaws.com/arcbank
       
       - name: Configurar AWS
         uses: aws-actions/configure-aws-credentials@v4
