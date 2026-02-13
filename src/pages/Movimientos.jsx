@@ -72,6 +72,7 @@ export default function Movimientos() {
 
         return {
           id: m.idTransaccion,
+          reference: m.referencia,
           date: parsedDate,
           dateStr: formatDateEC(parsedDate),
           timeStr: formatTimeEC(parsedDate),
@@ -169,7 +170,7 @@ export default function Movimientos() {
                     </td>
                     <td className="py-3">
                       <div className="fw-bold text-white">{tx.desc}</div>
-                      <code className="x-small text-warning" style={{ fontSize: '10px' }}>ID: {tx.id}</code>
+                      <code className="x-small text-warning" style={{ fontSize: '10px' }}>REF: {tx.reference || tx.id}</code>
                     </td>
                     <td className="py-3">
                       <span

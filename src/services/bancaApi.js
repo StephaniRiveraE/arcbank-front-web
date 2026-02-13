@@ -173,6 +173,13 @@ export async function solicitarReverso(idTransaccion, motivo) {
   });
 }
 
+export async function solicitarReversoPorReferencia(referencia, motivo) {
+  return await request(`/api/transacciones/referencia/${referencia}/devolucion`, {
+    method: 'POST',
+    body: JSON.stringify({ motivo })
+  });
+}
+
 export async function getMotivosDevolucion() {
   return await request('/api/transacciones/motivos-devolucion');
 }
@@ -194,6 +201,7 @@ const bancaApi = {
   getBancos,
   crearCuentaWeb,
   solicitarReverso,
+  solicitarReversoPorReferencia,
   getMotivosDevolucion,
   validarCuenta
 }
